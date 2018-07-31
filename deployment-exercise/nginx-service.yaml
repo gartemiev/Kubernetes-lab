@@ -1,0 +1,13 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: nginx-service
+spec:
+  selector:
+    app: nginx
+  type: NodePort
+  ports:
+    - port: 80
+      targetPort: 80
+
+#As CLI alternative kubectl expose deployment nginx-deployment --port=80 --target-port=80 --type=NodePort
