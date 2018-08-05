@@ -1,0 +1,145 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mysql-cluster
+
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: mysql-volume
+  labels:
+    type: local
+  namespace: mysql-cluster
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+
+---
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  labels:
+    app: mysql
+  name: mysql-pv-claim
+  namespace: mysql-cluster
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysqlpass
+  namespace: mysql-cluster
+type: Opaque
+data:
+  MYSQL_ROOT_PASSWORD: VGVzdDEyMzQ=
+
+#Keep in mind base64 encoding for password value
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-server
+  labels:
+    app: mysql-server
+  namespace: mysql-cluster
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-server
+  template:
+    metadata:
+      labels:
+        app: mysql-server
+    spec:
+      containers:
+      - name: mysql-server
+        image: mysql:5.7
+        resources:
+          requests:
+            memory: "400Mi"
+            cpu: "1"
+        ports:
+        - containerPort: 3306
+        envFrom:
+        - secretRef:
+           name: mysqlpass
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: mysql-pv-claim
+      volumes:
+      - name: mysql-pv-claim
+        persistentVolumeClaim:
+          claimName: mysql-pv-claim
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-client
+  labels:
+    app: mysql-client
+  namespace: mysql-cluster
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mysql-client
+  template:
+    metadata:
+      labels:
+        app: mysql-client
+    spec:
+      containers:
+      - name: mysql-client
+        image: adminer
+        ports:
+        - containerPort: 8080
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: mysql-server
+  namespace: mysql-cluster
+spec:
+  selector:
+    app: mysql-server
+  type: NodePort
+  ports:
+    - port: 3306
+      targetPort: 3306
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: client-port
+  namespace: mysql-cluster
+spec:
+  selector:
+    app: mysql-client
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080

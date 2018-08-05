@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: pod-demo
+  namespace: mysql-cluster
+spec:
+  hard:
+    pods: "1"
+
+#Strictly specify amount of pod per namespace
+#the same may be done for CPU, memory and other amount of objects like rc; services etc
